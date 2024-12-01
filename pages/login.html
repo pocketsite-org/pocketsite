@@ -1,0 +1,109 @@
+<div>
+    <h1>Login</h1>
+    <div class="login-container">
+        <form id="loginForm" class="login-form">
+            <table class="login-table">
+                <tr>
+                    <td><label for="email">Email:</label></td>
+                    <td><input type="email" id="email" name="email" required></td>
+                </tr>
+                <tr>
+                    <td><label for="password">Password:</label></td>
+                    <td><input type="password" id="password" name="password" required></td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="button-cell">
+                        <button type="submit">Login</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="error-cell">
+                        <div id="error-message" class="error-message"></div>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+
+    <style>
+        .login-container {
+
+        }
+
+        .login-form {
+
+        }
+
+        .login-table {
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        .login-table td {
+            padding: 5px;
+        }
+
+        .login-table label {
+
+        }
+
+        .login-table input {
+
+        }
+
+        .button-cell {
+
+        }
+
+        .button-cell button {
+            width: 100%;
+        }
+
+        .button-cell button:hover {
+        }
+
+        .error-cell {
+            text-align: center;
+            padding-top: 10px;
+        }
+
+        .error-message {
+            color: #d73a49;
+        }
+    </style>
+
+    <script>
+        // Redirect if already authenticated
+        if (window.pbFunctions.auth.isAuthenticated()) {
+            htmx.ajax('GET', '/components/header.html', '#header');
+            htmx.ajax('GET', '/pages/dashboard.html', '#content');
+        }
+
+        // Remove the header
+        document.getElementById('header').innerHTML = '';
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const success = await window.pbFunctions.auth.login(email, password);
+                
+                if (success) {
+                    htmx.ajax('GET', '/components/header.html', '#header');
+                    htmx.ajax('GET', '/pages/dashboard.html', '#content');
+                } else {
+                    document.getElementById('error-message').textContent = 
+                        'Invalid email or password';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                document.getElementById('error-message').textContent = 
+                    'An error occurred during login';
+            }
+        });
+    </script>
+</div>

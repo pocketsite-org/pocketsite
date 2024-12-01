@@ -1,0 +1,131 @@
+<h1>Objects</h1>
+
+<div class="page-header">
+    <button class="create-btn" onclick="createObject()">Create New Object</button>
+</div>
+
+<div id="objects-list">
+    <table class="objects-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Content</th>
+                <th>Updated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="objects-tbody">
+            <!-- Objects will be inserted here -->
+        </tbody>
+    </table>
+</div>
+
+<style>
+   .objects-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .objects-table th,
+    .objects-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .objects-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+
+    .objects-table tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .action-buttons button {}
+
+    .edit-btn {}
+
+    .delete-btn {}
+</style>
+
+<script>
+    // List all objects
+    window.pbFunctions.collections.getFullList('posts', {
+        filter: 'type="object"',
+        sort: '-updated'
+    }).then((objects) => {
+        const tableBody = document.getElementById('objects-tbody');
+        tableBody.innerHTML = '';
+
+        objects.forEach((object) => {
+            const row = document.createElement('tr');
+            const updateDate = new Date(object.updated).toLocaleString();
+            
+            row.innerHTML = `
+                <td>${object.name}</td>
+                <td>${object.type}</td>
+                <td class="content-preview">${object.content}</td>
+                <td>${updateDate}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="edit-btn" onclick="editObject('${object.id}')">Edit</button>
+                        <button class="delete-btn" onclick="deleteObject('${object.id}')">Delete</button>
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    });
+
+    async function createObject() {
+        const author = window.pbFunctions.auth.getCurrentUser();
+        const authorId = author?.id || 'No author';
+        
+        try {
+            const newObject = await window.pbFunctions.collections.create('posts', {
+                name: '/new-object-' + Date.now(),
+                content: '',
+                type: 'object',
+                status: 'publish',
+                author: authorId,
+                objects: [],
+                parent: '',
+                created: new Date().toISOString(),
+                updated: new Date().toISOString()
+            });
+            
+            // Store the object ID and navigate to edit page
+            localStorage.setItem('editPageId', newObject.id);
+            htmx.ajax('GET', '/pages/edit.html', '#content');
+        } catch (error) {
+            console.error('Error creating object:', error);
+            alert('Failed to create object');
+        }
+    }
+
+    function editObject(id) {
+        localStorage.setItem('editPageId', id);
+        htmx.ajax('GET', '/pages/edit.html', '#content');
+    }
+
+    function deleteObject(id) {
+        if (confirm('Are you sure you want to delete this object?')) {
+            window.pbFunctions.collections.delete('posts', id)
+                .then(() => {
+                    htmx.ajax('GET', '/pages/objects.html', '#content');
+                })
+                .catch((error) => {
+                    console.error('Error deleting object:', error);
+                    alert('Failed to delete object');
+                });
+        }
+    }
+</script>

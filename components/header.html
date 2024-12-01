@@ -1,0 +1,59 @@
+<header>
+    <nav class="navbar">
+        <div class="nav-links">
+            <button onclick="loadPage('/pages/dashboard.html')" data-page="dashboard">📰 Dashboard</button>
+            <button onclick="loadPage('/pages/pages.html')" data-page="pages">📖 Pages</button>
+            <button onclick="loadPage('/pages/posts.html')" data-page="posts">📃 Posts</button>
+            <button onclick="loadPage('/pages/objects.html')" data-page="objects">🔖Objects</button>
+            <button onclick="loadPage('/pages/media.html')" data-page="media">💾 Media</button>
+            <button onclick="loadPage('/pages/themes.html')" data-page="themes">📐 Themes</button>
+            <button onclick="loadPage('/pages/settings.html')" data-page="settings">⚙️ Settings</button>
+            <button id="user-info" onclick="loadPage('/pages/profile.html')" data-page="profile"> </button>
+            <button onclick="logout()">🚪 Logout</button>
+        </div>
+    </nav>
+    <hr>
+</header>
+
+<style>
+    nav {
+        padding-top: 5px;
+        padding-left: 5px;
+        padding-right: 5px;
+        height: fit-content;
+    }
+</style>
+
+<script>
+    // Add user info to the header
+    document.body.addEventListener('htmx:load', function(evt) {
+        const user = window.pbFunctions.auth.getCurrentUser();
+        if (user) {
+            document.getElementById('user-info').innerText = '👤 ' + user.name;
+        }
+        
+        // Highlight current page
+        const currentPage = localStorage.getItem('currentPage');
+        if (currentPage) {
+            const pageName = currentPage.split('/').pop().replace('.html', '');
+            document.querySelectorAll('[data-page]').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.page === pageName) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+    });
+
+    // Page loading function
+    function loadPage(path) {
+        localStorage.setItem('currentPage', path);
+        htmx.ajax('GET', path, '#content');
+    }
+
+    // Logout function
+    function logout() {
+        localStorage.removeItem('currentPage'); // Clear stored page
+        window.pbFunctions.auth.logout();
+    }
+</script>

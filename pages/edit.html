@@ -1,0 +1,213 @@
+<div id="page-edit">
+    <h1>Edit Page</h1>
+    <form id="edit-page-form">
+        <input type="hidden" id="page-id">
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="name">URL Path</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="excerpt">Excerpt</label>
+            <input type="text" id="excerpt" name="excerpt">
+        </div>
+        <div class="form-group">
+            <label for="author">Author</label>
+            <input type="text" id="author" name="author" disabled>
+        </div>
+        <div class="form-group">
+            <label for="type">Type</label>
+            <select id="type" name="type" required>
+                <option value="page">Page</option>
+                <option value="object">Object</option>
+            </select>
+        </div>
+        <hr>
+        <div class="editor-container">
+            <div class="editor-column">
+                <h3>Code Editor</h3>
+                <div id="code-editor-panel" class="editor-panel">
+                    <textarea id="code-editor"></textarea>
+                </div>
+            </div>
+            <div class="editor-column">
+                <div class="editor-column">
+                    <h3>Page Preview</h3> 
+                    <div id="preview-panel" class="editor-panel">
+                        <iframe id="page-preview" class="preview-frame"></iframe>
+                    </div>
+                    <button type="button" class="preview-btn" onclick="window.pageEdit.reloadPreview()">Reload Preview</button>
+                </div>
+            </div>
+            <textarea id="content" name="content" hidden></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="save-btn">Save</button>
+            <button type="button" class="cancel-btn" onclick="window.pageEdit.cancelEdit()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .editor-container {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .editor-column {
+        flex: 1;
+    }
+
+    .editor-column h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    .preview-frame {
+        width: 100%;
+        height: 400px;
+        border: 1px solid #ddd;
+        background: white;
+    }
+
+    .CodeMirror {
+        height: 400px;
+        border: 1px solid #ddd;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+</style>
+
+<script>
+window.pageEdit = window.pageEdit || {
+    editor: null,
+    siteUrl: '',
+    init: async function() {
+        const contentField = document.getElementById('content');
+        const pageId = localStorage.getItem('editPageId');
+        const codeEditorTextarea = document.getElementById('code-editor');
+        
+        document.getElementById('page-id').value = pageId;
+
+        // Get site URL from options
+        try {
+            const options = await window.pbFunctions.collections.getList('options');
+            this.siteUrl = options.items.find(item => item.name === 'siteurl')?.value || '';
+        } catch (error) {
+            console.error('Error fetching site URL:', error);
+        }
+
+        // Initialize CodeMirror
+        this.editor = CodeMirror.fromTextArea(codeEditorTextarea, {
+            mode: 'htmlmixed',
+            theme: 'monokai',
+            lineNumbers: true,
+            autoCloseTags: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentUnit: 4,
+            tabSize: 4,
+            lineWrapping: true,
+            foldGutter: true,
+            gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+            extraKeys: {
+                'Ctrl-Space': 'autocomplete'
+            }
+        });
+
+        // Remove automatic preview updates
+        // this.editor.on('change', () => {
+        //     this.updatePreview();
+        // });
+
+        // Cancel edit function
+        this.cancelEdit = function() {
+            localStorage.removeItem('editPageId');
+            htmx.ajax('GET', '/pages/pages.html', '#content');
+        };
+
+        // Fetch and populate page data
+        if (pageId) {
+            window.pbFunctions.collections.get('posts', pageId)
+                .then((page) => {
+                    document.getElementById('title').value = page.title || '';
+                    document.getElementById('name').value = page.name || '';
+                    document.getElementById('excerpt').value = page.excerpt || '';
+                    document.getElementById('type').value = page.type || 'page'; 
+                    this.editor.setValue(page.content || '');
+                    contentField.value = page.content || '';
+                    // Initial preview load
+                    this.loadInitialPreview(page.name);
+                })
+                .catch((error) => {
+                    console.error('Error fetching page:', error);
+                    alert('Failed to load page data');
+                });
+        }
+
+        // Get the author info
+        const author = window.pbFunctions.auth.getCurrentUser();
+        const authorId = author?.id || 'No author';
+        const authorName = author?.name || 'No author';
+        document.getElementById('author').value = authorName;
+
+        // Handle form submission
+        document.getElementById('edit-page-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            contentField.value = this.editor.getValue();
+
+            const formData = {
+                title: document.getElementById('title').value,
+                name: document.getElementById('name').value,
+                excerpt: document.getElementById('excerpt').value,
+                content: contentField.value,
+                type: document.getElementById('type').value,
+                status: 'publish',
+                author: authorId,
+                updated: new Date().toISOString()
+            };
+
+            try {
+                // Save the page
+                await window.pbFunctions.collections.update('posts', pageId, formData);
+                
+                // Reload preview after save
+                this.reloadPreview();
+                
+                // Show success message
+                alert('Page saved successfully!');
+                
+            } catch (error) {
+                console.error('Error updating page:', error);
+                alert('Failed to update page');
+            }
+        });
+    },
+
+    // Load initial preview
+    loadInitialPreview: function(pagePath) {
+        const preview = document.getElementById('page-preview');
+        const path = pagePath || document.getElementById('name').value;
+        if (this.siteUrl && path) {
+            preview.src = `${this.siteUrl}${path}`;
+        }
+    },
+
+    // Manual preview reload with cache busting
+    reloadPreview: function() {
+        const preview = document.getElementById('page-preview');
+        if (preview.src) {
+            const timestamp = new Date().getTime();
+            const currentSrc = preview.src.split('?')[0];
+            preview.src = `${currentSrc}?t=${timestamp}`;
+        }
+    }
+};
+
+// Initialize the page edit functionality
+window.pageEdit.init();
+</script>
