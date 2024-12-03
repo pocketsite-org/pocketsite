@@ -1,0 +1,33 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "npm run build && wrangler pages dev",
+    "postinstall": "nuxt prepare",
+    "deploy": "npm run build && wrangler pages deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.7.1",
+    "@codemirror/lang-html": "^6.4.9",
+    "@codemirror/state": "^6.4.1",
+    "codemirror": "^6.0.1",
+    "jsdom": "^25.0.1",
+    "nuxt": "^3.14.1592",
+    "pocketbase": "^0.22.1",
+    "vue": "latest",
+    "vue-router": "latest",
+    "w3c-xmlserializer": "^5.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@nuxtjs/sitemap": "^7.0.0",
+    "nitro-cloudflare-dev": "^0.2.1",
+    "nuxt-codemirror": "^0.0.11",
+    "wrangler": "^3.91.0"
+  }
+}
